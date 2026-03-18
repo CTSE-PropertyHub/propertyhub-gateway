@@ -1,0 +1,6 @@
+@PropertyHub.Gateway_HostAddress = http://localhost:5243
+
+GET {{PropertyHub.Gateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
