@@ -1,13 +1,12 @@
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
 
-# Copy solution and project files first (layer caching — faster rebuilds)
-COPY *.sln .
+# Copy project file first for layer caching — restore only re-runs when dependencies change
 COPY src/PropertyHub.Gateway/*.csproj ./src/PropertyHub.Gateway/
 
 # Restore NuGet packages
-RUN dotnet restore
+RUN dotnet restore src/PropertyHub.Gateway/PropertyHub.Gateway.csproj
 
 # Copy everything else and build
 COPY . .
@@ -16,7 +15,7 @@ RUN dotnet publish src/PropertyHub.Gateway/PropertyHub.Gateway.csproj \
     -o /app/publish
 
 # Stage 2: Runtime (smaller final image)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 # Copy only the published output from the build stage
