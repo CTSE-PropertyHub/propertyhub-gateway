@@ -34,12 +34,12 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           dotnet sonarscanner begin \
-            /k:"REPLACE_WITH_SONAR_PROJECT_KEY" \
-            /o:"REPLACE_WITH_SONAR_ORG_KEY" \
+            /k:"CTSE-PropertyHub_propertyhub-gateway" \
+            /o:"ctse-propertyhub" \
             /d:sonar.host.url="https://sonarcloud.io" \
-            /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+            /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           dotnet build
-          dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+          dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
       # Build the Docker image and push it to ACR
       # Tagged with the exact git commit SHA for traceability
