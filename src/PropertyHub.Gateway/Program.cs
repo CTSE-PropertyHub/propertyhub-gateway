@@ -27,7 +27,17 @@ var gatewayOptions = builder.Configuration
     ?? throw new InvalidOperationException(
         $"Missing required configuration section '{GatewayOptions.SectionName}'.");
 
-// 2. Rate Limiter — global fixed-window limiter, partitioned by client IP.
+// 2. CORS — allow the frontend (any origin for now; tighten in production).
+//    AllowAnyOrigin is safe with Bearer token auth because no cookies are used.
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
+// 3. Rate Limiter — global fixed-window limiter, partitioned by client IP.
 //    100 requests per minute per IP. Runs before authentication to reject
 //    abusive traffic without spending resources on JWT validation.
 builder.Services.AddRateLimiter(options =>
@@ -138,6 +148,8 @@ if (app.Environment.IsDevelopment())
 //   → claims forwarding → YARP forwarding
 
 app.UseHttpsRedirection();
+
+app.UseCors();
 
 app.UseRateLimiter();
 
