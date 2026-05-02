@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.Extensions.Http.Resilience;
+using Polly;
 using Yarp.ReverseProxy.Forwarder;
 
 namespace PropertyHub.Gateway.Infrastructure;
