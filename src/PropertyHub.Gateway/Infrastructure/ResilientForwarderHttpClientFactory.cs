@@ -1,6 +1,5 @@
 using System.Net;
 using Microsoft.Extensions.Http.Resilience;
-using Polly;
 using Yarp.ReverseProxy.Forwarder;
 
 namespace PropertyHub.Gateway.Infrastructure;
@@ -10,10 +9,13 @@ namespace PropertyHub.Gateway.Infrastructure;
 /// HttpMessageInvoker in an independent Polly v8 resilience pipeline.
 ///
 /// Pipeline per cluster (outermost → innermost):
-///   retry (2 attempts, exponential backoff with jitter)
-///     → circuit breaker (opens at 50% failure ratio over 30s, breaks for 30s)
-///       → timeout (10s per attempt)
-///         → SocketsHttpHandler (actual TCP connection)
+///   circuit breaker (opens at 50% failure ratio over 30s, breaks for 30s)
+///     → timeout (10s per attempt)
+///       → SocketsHttpHandler (actual TCP connection)
+///
+/// Retries are omitted: YARP request bodies are single-read streams, so a retry
+/// attempt would throw "Stream was already consumed". Retries are also unsafe for
+/// non-idempotent requests (POST, PATCH, DELETE) on a reverse proxy.
 ///
 /// Per-cluster isolation: each cluster has its own circuit breaker state.
 /// A tripped circuit on property-service does not affect tenancy-service.
@@ -60,18 +62,12 @@ public sealed class ResilientForwarderHttpClientFactory : IForwarderHttpClientFa
         };
 
         // Polly v8 resilience pipeline.
-        // HttpRetryStrategyOptions and HttpCircuitBreakerStrategyOptions are from
-        // Microsoft.Extensions.Http.Resilience. They pre-configure ShouldHandle to
-        // cover HttpRequestException, TimeoutRejectedException, and transient HTTP
-        // status codes (5xx, 408, 429) — no custom predicates needed.
+        // Retries are intentionally omitted: YARP proxies the request body as a
+        // StreamCopyHttpContent (one-time-read stream). Retrying after the stream
+        // has been consumed throws "Stream was already consumed" and also risks
+        // double-submission of non-idempotent requests (POST, PATCH, DELETE).
+        // Circuit breaker + timeout provide sufficient resilience without that risk.
         var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
-            .AddRetry(new HttpRetryStrategyOptions
-            {
-                MaxRetryAttempts = 2,
-                BackoffType = DelayBackoffType.Exponential,
-                // Jitter spreads retry storms when many clients retry simultaneously.
-                UseJitter = true,
-            })
             .AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
             {
                 // Open the circuit when >= 50% of requests fail within the sampling window.
