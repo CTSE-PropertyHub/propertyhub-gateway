@@ -81,5 +81,7 @@ public sealed class ClaimsForwardingMiddleware
         }
 
         await _next(context);
+
+        // test comment
     }
 }
